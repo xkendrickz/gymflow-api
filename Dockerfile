@@ -1,40 +1,50 @@
-#Dockerfile Example on running PHP Laravel app using Apache web server 
-
 FROM php:8.1-apache
 
-# Install necessary libraries
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libonig-dev \
-    libzip-dev
+    libzip-dev \
+    libpq-dev \
+    zip \
+    unzip \
+    git \
+    curl
 
-# Install PHP extensions
+# Install PHP extensions including pgsql
 RUN docker-php-ext-install \
     mbstring \
-    zip
-
-# Copy Laravel application
-COPY . /var/www/html
-
-# Set working directory
-WORKDIR /var/www/html
+    zip \
+    pdo \
+    pdo_pgsql \
+    pgsql
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy application
+COPY . .
+
 # Install dependencies
-RUN composer install
+RUN composer install --no-dev --optimize-autoloader
 
-# Change ownership of our applications
-RUN chown -R www-data:www-data /var/www/html
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/storage \
+    && chmod -R 755 /var/www/html/bootstrap/cache
 
-RUN docker-php-ext-install mbstring
+# Enable Apache rewrite module
+RUN a2enmod rewrite
 
-COPY .env.example .env
-RUN php artisan key:generate
+# Copy Apache config
+COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
 
 # Expose port 80
 EXPOSE 80
 
-# Adjusting Apache configurations
-RUN a2enmod rewrite
-COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
+# Start script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+CMD ["/start.sh"]

@@ -1,15 +1,12 @@
 #!/bin/bash
 
 # Run migrations
-php /var/www/artisan migrate --force
-php /var/www/artisan db:seed --force
+php artisan migrate --force
 
-# Cache config
-php /var/www/artisan config:cache
-php /var/www/artisan route:cache
+# Cache config for production
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 
-# Start PHP-FPM in background
-php-fpm -D
-
-# Start Nginx in foreground
-nginx -g "daemon off;"
+# Start Apache
+apache2-foreground
