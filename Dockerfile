@@ -1,26 +1,40 @@
-FROM php:8.2-fpm
+#Dockerfile Example on running PHP Laravel app using Apache web server 
 
-# Install dependencies
+FROM php:8.1-apache
+
+# Install necessary libraries
 RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev zip unzip nginx \
-    libpq-dev \
-    && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
+    libonig-dev \
+    libzip-dev
+
+# Install PHP extensions
+RUN docker-php-ext-install \
+    mbstring \
+    zip
+
+# Copy Laravel application
+COPY . /var/www/html
+
+# Set working directory
+WORKDIR /var/www/html
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www
+# Install dependencies
+RUN composer install
 
-COPY . .
+# Change ownership of our applications
+RUN chown -R www-data:www-data /var/www/html
 
-RUN composer install --no-dev --optimize-autoloader
+RUN docker-php-ext-install mbstring
 
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+COPY .env.example .env
+RUN php artisan key:generate
 
-COPY ./docker/nginx.conf /etc/nginx/sites-enabled/default
-COPY ./docker/start.sh /start.sh
-RUN chmod +x /start.sh
+# Expose port 80
+EXPOSE 80
 
-EXPOSE 10000
-
-CMD ["/start.sh"]
+# Adjusting Apache configurations
+RUN a2enmod rewrite
+COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
