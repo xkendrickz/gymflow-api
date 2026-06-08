@@ -17,8 +17,8 @@ class JadwalHarian extends Model
      * @var array
      */
     protected $fillable = [
-        'id_jadwal_harian ',
-		'id_jadwal_umum ',
+        'id_jadwal_harian',
+		'id_jadwal_umum',
 		'hari',
     ];
 }

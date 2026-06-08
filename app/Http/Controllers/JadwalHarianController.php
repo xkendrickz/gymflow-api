@@ -10,12 +10,20 @@ use Carbon\Carbon;
 
 class JadwalHarianController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $startDate = Carbon::today()->toDateString();
-        $endDate   = Carbon::today()->addDays(7)->toDateString();
+        $tanggal       = $request->query('tanggal');
+        $idInstruktur  = $request->query('id_instruktur');
 
-        $data = DB::table('jadwal_harian')
+        if ($tanggal) {
+            $startDate = $tanggal;
+            $endDate   = $tanggal;
+        } else {
+            $startDate = Carbon::today()->toDateString();
+            $endDate   = Carbon::today()->addDays(7)->toDateString();
+        }
+
+        $query = DB::table('jadwal_harian')
             ->select(
                 'jadwal_harian.id_jadwal_harian',
                 'jadwal_harian.hari',
@@ -23,13 +31,19 @@ class JadwalHarianController extends Controller
                 'kelas.nama_kelas',
                 'instruktur.nama_instruktur',
                 'kelas.tarif',
-                DB::raw('IF(izin.konfirmasi = 1, izin.detail_izin, NULL) as status')
+                DB::raw('CASE WHEN izin.konfirmasi = 1 THEN izin.detail_izin ELSE NULL END as status')
             )
             ->join('jadwal_umum', 'jadwal_harian.id_jadwal_umum', '=', 'jadwal_umum.id_jadwal_umum')
             ->join('instruktur', 'jadwal_umum.id_instruktur', '=', 'instruktur.id_instruktur')
             ->join('kelas', 'jadwal_umum.id_kelas', '=', 'kelas.id_kelas')
             ->leftJoin('izin', 'jadwal_harian.id_jadwal_harian', '=', 'izin.id_jadwal_harian')
-            ->whereBetween('jadwal_harian.hari', [$startDate, $endDate])
+            ->whereBetween('jadwal_harian.hari', [$startDate, $endDate]);
+
+        if ($idInstruktur) {
+            $query->where('jadwal_umum.id_instruktur', $idInstruktur);
+        }
+
+        $data = $query
             ->orderBy('jadwal_harian.hari', 'asc')
             ->orderBy('jadwal_umum.jam', 'asc')
             ->get();
